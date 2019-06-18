@@ -1,0 +1,57 @@
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:include="layout :: head(title=~{::title},links=~{})">
+<title>Admin Home</title>
+</head>
+<body th:include="layout :: body" th:with="content=~{::content}">
+	<div th:fragment="content">
+		<h1>Welcome to iTrust2 - Admin</h1>
+		<script th:inline="javascript">
+		/* Otherwise Thymeleaf tries to parse Javascript as XML and breaks itself sometimes.  Sigh */
+		/*<![CDATA[*/
+			var app = angular.module("viewLogs", []);
+			app.controller('controller', function($scope, $http) {
+				// get all diagnoses of patient and display in table			
+				$http.get("/iTrust2/api/v1/toplogentriesforcurrentuser").then(
+						function(response) {
+							$scope.logs = response.data;
+							$scope.message = "";
+						}, function(rejection) {
+							$scope.logs = [];
+							$scope.message = "Unable to display logs";
+						});
+				
+				$scope.twoDigit = function(num) {
+					if (num < 10) {
+						return "0" + num;
+					}
+					return num;
+				}
+
+
+			});
+		</script>
+
+		<div ng-app="viewLogs" ng-controller="controller">
+			<table style="width: 100%" class="table table-hover">
+				<thead>
+					<tr>
+						<th>Name of Accessor</th>
+						<th>Role of Accessor</th>
+						<th>Date</th>
+						<th>Transaction Type</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr ng-repeat="log in logs | orderBy:'-' ">
+						<td name="Name_of_Accessor">{{log.primaryUser}}</td>
+						<td name="Role_of_Accessor">{{log.role}}</td>
+						<td name="Time">{{twoDigit(log.time.month + 1)}}/{{twoDigit(log.time.dayOfMonth)}}/{{twoDigit(log.time.year)}} 
+						                {{twoDigit(log.time.hourOfDay)}}:{{twoDigit(log.time.minute)}}:{{twoDigit(log.time.second)}}</td>
+						<td name="Transaction_Type">{{log.logCode}}</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+</body>
+</html>

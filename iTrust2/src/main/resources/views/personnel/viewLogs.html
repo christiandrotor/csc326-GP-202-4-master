@@ -1,0 +1,178 @@
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:include="layout :: head(title=~{::title},links=~{})">
+<title>View Access Logs</title>
+<link rel="stylesheet"
+	href="//netdna.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+</head>
+<body th:include="layout :: body" th:with="content=~{::content}">
+	<div th:fragment="content">
+
+		<script th:inline="javascript">
+		/* Otherwise Thymeleaf tries to parse Javascript as XML and breaks itself sometimes.  Sigh */
+		/*<![CDATA[*/
+			var app = angular.module("viewLogs", []);
+			app.controller('controller', function($scope, $http) {
+				// get all diagnoses of patient and display in table
+				$scope.startOffset;
+				$scope.endOffset;
+				$scope.page;
+				
+				function updatePage() {
+					$scope.page = [];
+					var start = $scope.startOffset;
+					if ($scope.startOffset < 0) {
+						start = 0;
+					}
+					for(var i = start; i < $scope.endOffset; i++) {
+						$scope.page.push($scope.logs[i]);
+					}
+				}
+				
+				$http.get("/iTrust2/api/v1/logentriesforcurrentuser").then(
+						function(response) {
+							$scope.logs = response.data;
+							$scope.message = "";
+							$scope.startOffset = $scope.logs.length - 10;
+							$scope.endOffset = $scope.logs.length;
+							console.log($scope.logs);
+							$scope.page = [];
+							updatePage();
+						}, function(rejection) {
+							$scope.logs = [];
+							$scope.page = [];
+							$scope.startOffset = 0;
+							$scope.message = "Unable to display logs";
+						});
+				
+				$scope.getPageNumber = function () {
+					if ((Math.ceil($scope.logs.length / 10)) == 0) {
+						return "Page: 0 / 0";
+					} else {
+						return "Page: " + (Math.ceil($scope.logs.length / 10) - Math.ceil($scope.startOffset / 10)) + " / " + (Math.ceil($scope.logs.length / 10));
+					}
+				}
+				
+				$scope.prePage = function () {
+					$scope.startOffset = $scope.startOffset + 10;
+					$scope.endOffset = $scope.endOffset + 10;
+					updatePage()
+				}
+				
+				$scope.nextPage = function () {
+					$scope.startOffset = $scope.startOffset - 10;
+					$scope.endOffset = $scope.endOffset - 10;
+					updatePage()
+				}
+				
+				$scope.dateFliter = function () {
+
+					$scope.messageFail = false;
+					$http.get("/iTrust2/api/v1/logentriesfordate/" + $scope.start + "/" + $scope.end).then(
+							function(response) {
+								$scope.logs = response.data;
+								$scope.message = "";
+								$scope.startOffset = $scope.logs.length - 10;
+								$scope.endOffset = $scope.logs.length;
+								console.log($scope.logs);
+								$scope.page = [];
+								updatePage();
+							}, function(rejection) {
+								$scope.logs = [];
+								$scope.page = [];
+								$scope.startOffset = 0;
+								$scope.message = rejection.data;
+								$scope.messageFail = true;
+								alert("Input value is invalid.");
+								console.log($scope.message);
+							});
+				}
+				
+				$scope.twoDigit = function(num) {
+					if (num < 10) {
+						return "0" + num;
+					}
+					return num;
+				}
+
+
+			});
+		</script>
+
+		<div ng-app="viewLogs" ng-controller="controller">
+			<div class="container">
+				<div class="row">
+					<div class="col-md-12">
+						<div class="panel panel-primary">
+							<div class="panel-heading">
+								<h3>View Access Entries</h3>
+							</div>
+							<div class="panel-body">
+								<table>
+									<tr>
+										<td><b>Date Filter</b>
+										<td>
+									</tr>
+									<tr>
+										<td>Start Date:</td>
+
+										<td><input type="text"
+											class="form-control ng-pristine ng-empty ng-invalid ng-invalid-required ng-touched"
+											ng-model="start" placeholder="format: YYYY/MM/DD" /></td>
+									</tr>
+									<tr>
+										<td>End Date:</td>
+										<td><input
+											class="form-control ng-pristine ng-empty ng-invalid ng-invalid-required ng-touched"
+											type="text" ng-model="end" placeholder="format: YYYY/MM/DD" /></td>
+									</tr>
+
+									<tr>
+										<td><button class="btn btn-success"
+												ng-click="dateFliter()">Submit</button></td>
+										<td><div ng-if="messageFail">Input is invalid</div></td>
+									</tr>
+								</table>
+								<hr></hr>
+								<table class="table table-bordered">
+									<thead>
+										<tr>
+											<th>Name of Accessor</th>
+											<th>Role of Accessor</th>
+											<th>Date</th>
+											<th>Transaction Type</th>
+										</tr>
+									</thead>
+									<tbody>
+										<tr ng-repeat="log in page | orderBy:'-' ">
+											<td name="Name_of_Accessor">{{log.primaryUser}}</td>
+											<td name="Role_of_Accessor">{{log.role}}</td>
+											<td name="Time">{{twoDigit(log.time.month +
+												1)}}/{{twoDigit(log.time.dayOfMonth)}}/{{twoDigit(log.time.year)}}
+												{{twoDigit(log.time.hourOfDay)}}:{{twoDigit(log.time.minute)}}:{{twoDigit(log.time.second)}}</td>
+											<td name="Transaction_Type">{{log.logCode}}</td>
+										</tr>
+									</tbody>
+								</table>
+								<div class="row" style="width: 400px; margin: 0 auto">
+								
+									<div ng-if="endOffset < logs.length">
+										<button class="btn btn-success" ng-click="prePage()"
+											style="float: left;">Previous Page</button>
+									</div>
+									
+									<div ng-if="startOffset > 0">
+										<button class="btn btn-success" ng-click="nextPage()"
+											style="float: right;">Next Page</button>
+									</div>
+									
+									<div style="text-align: center; width: 100px; margin: 10 auto">{{getPageNumber()}}</div>
+
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+</body>
+</html>
